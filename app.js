@@ -49,10 +49,18 @@ const steps = [
     required: true,
   },
   {
+    title: 'Discount Code (optional)',
+    label: 'Enter discount code if you have one:',
+    name: 'discount',
+    type: 'discount',
+    placeholder: 'Enter code here (optional)',
+    required: false,
+  },
+  {
     title: "You're Done!",
     label: '',
     type: 'completed',
-    image: images[4],
+    image: images[4], // or rotate image
   },
 ];
 
@@ -75,6 +83,18 @@ function showStep(stepIdx, formData, progress) {
   progressBar.appendChild(barFill);
 
   formDiv.appendChild(progressBar);
+
+  if (stepIdx === 0) {
+    const h2 = document.createElement('h2');
+    h2.textContent = '"Shred in Six" Program';
+    h2.style.textAlign = 'center';
+    h2.style.fontWeight = '800';
+    h2.style.fontSize = '2.0rem';
+    h2.style.margin = '0 0 1rem 0';
+    h2.style.letterSpacing = '0.01em';
+    h2.style.color = '#1a1a1a';
+    formDiv.appendChild(h2);
+  }
 
   if (step.image) {
     const img = document.createElement('img');
@@ -101,7 +121,7 @@ function showStep(stepIdx, formData, progress) {
     const p = document.createElement('p');
     p.style.textAlign = 'center';
     p.style.fontSize = '1.18rem';
-    p.textContent = "Thank you for applying! We'll contact you soon.";
+    p.textContent = "Thank you for applying! Dominic or his team will contact you during the next 3 days.";
     formDiv.appendChild(p);
     root.appendChild(formDiv);
     return;
@@ -115,7 +135,46 @@ function showStep(stepIdx, formData, progress) {
   }
 
   let input;
-  if (step.type === 'text' || step.type === 'email') {
+  let iconContainer;
+  if (step.type === 'discount') {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'discount-wrapper';
+
+    input = document.createElement('input');
+    input.type = 'text';
+    input.id = step.name;
+    input.name = step.name;
+    input.autocomplete = 'off';
+    input.value = formData[step.name] || '';
+    input.placeholder = step.placeholder || '';
+    input.autofocus = true;
+
+    // Animated checkmark
+    const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    checkSvg.setAttribute('width', '28');
+    checkSvg.setAttribute('height', '28');
+    checkSvg.innerHTML = '<circle cx="14" cy="14" r="13" fill="none" stroke="#20c933" stroke-width="3"/><polyline points="8,15 13,21 21,9" fill="none" stroke="#20c933" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>';
+    // Append and bind
+    wrapper.appendChild(input);
+    wrapper.appendChild(checkSvg);
+    formDiv.appendChild(wrapper);
+
+    // Always check, even on page entry
+    function updateCheck() {
+      const value = input.value.trim();
+      if (value.length > 0 && value.toLowerCase() === 'shreddie') {
+        checkSvg.classList.add('visible');
+      } else {
+        checkSvg.classList.remove('visible');
+      }
+    }
+    input.addEventListener('input', updateCheck);
+    // On render
+    setTimeout(() => {
+      input.focus();
+      updateCheck();
+    }, 120);
+  } else if (step.type === 'text' || step.type === 'email') {
     input = document.createElement('input');
     input.type = step.type;
     input.id = step.name;
@@ -125,6 +184,8 @@ function showStep(stepIdx, formData, progress) {
     input.placeholder = step.placeholder || '';
     input.required = step.required === true;
     input.autofocus = true;
+    setTimeout(() => input.focus(), 120);
+    formDiv.appendChild(input);
   } else if (step.type === 'textarea') {
     input = document.createElement('textarea');
     input.id = step.name;
@@ -134,6 +195,8 @@ function showStep(stepIdx, formData, progress) {
     input.rows = 4;
     input.required = step.required === true;
     input.autofocus = true;
+    setTimeout(() => input.focus(), 120);
+    formDiv.appendChild(input);
   } else if (step.type === 'select') {
     input = document.createElement('select');
     input.id = step.name;
@@ -146,11 +209,8 @@ function showStep(stepIdx, formData, progress) {
       if ((formData && formData[step.name] === opt.value)) o.selected = true;
       input.appendChild(o);
     });
-  }
-
-  if (input) {
+    setTimeout(() => input.focus(), 120);
     formDiv.appendChild(input);
-    setTimeout(() => input.focus(), 150);
   }
 
   // Error/success message
@@ -160,32 +220,46 @@ function showStep(stepIdx, formData, progress) {
   formDiv.appendChild(msgDiv);
 
   // Button group
+  const isDiscountStep = step.type === 'discount';
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = stepIdx === steps.length - 2 ? 'Submit' : 'Next';
   btn.onclick = () => {
     let value;
-    if (step.type === 'text' || step.type === 'email') value = input.value.trim();
+    if (step.type === 'discount') value = input.value.trim();
+    else if (step.type === 'text' || step.type === 'email') value = input.value.trim();
     else if (step.type === 'textarea') value = input.value.trim();
     else if (step.type === 'select') value = input.value;
     // Validation
-    if (step.required && (!value || (step.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)))) {
-      msgDiv.textContent = step.type === 'email' ? 'Please enter a valid email address.' : 'This field is required.';
+    if (step.type === 'email' && (!value || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value))) {
+      msgDiv.textContent = 'Please enter a valid email address.';
+      input.focus();
+      return;
+    }
+    // Discount validation
+    if (step.type === 'discount') {
+      if (value && value.toLowerCase() !== 'shreddie') {
+        msgDiv.textContent = 'Discount code is invalid.';
+        input.focus();
+        return;
+      }
+      formData[step.name] = value;
+      // Submit with discount
+      submitForm(formData, () => {
+        transition(() => showStep(stepIdx + 1, formData, 100));
+      });
+      return;
+    }
+    // Other fields
+    if (step.required && !value) {
+      msgDiv.textContent = 'This field is required.';
       input.focus();
       return;
     }
     formData[step.name] = value;
-    if (stepIdx < steps.length - 2) {
-      transition(() => showStep(stepIdx + 1, formData, ((stepIdx + 2) / (steps.length - 1)) * 100));
-    } else {
-      submitForm(formData, () => {
-        transition(() => showStep(stepIdx + 1, formData, 100));
-      });
-    }
+    transition(() => showStep(stepIdx + 1, formData, ((stepIdx + 2) / (steps.length - 1)) * 100));
   };
   formDiv.appendChild(btn);
-
-  // Animate in
   transition(() => {
     root.appendChild(formDiv);
   });
@@ -214,7 +288,7 @@ function submitForm(data, cb) {
   fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, discount: data.discount || '' }),
   })
     .then(() => { btn.disabled = false; cb(); })
     .catch(() => { btn.disabled = false; cb(); });
