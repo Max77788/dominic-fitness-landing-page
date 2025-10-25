@@ -174,7 +174,7 @@ function showStep(stepIdx, formData, progress) {
       input.focus();
       updateCheck();
     }, 120);
-  } else if (step.type === 'text' || step.type === 'email') {
+  } else if (step.type === 'text') {
     input = document.createElement('input');
     input.type = step.type;
     input.id = step.name;
@@ -186,6 +186,27 @@ function showStep(stepIdx, formData, progress) {
     input.autofocus = true;
     setTimeout(() => input.focus(), 120);
     formDiv.appendChild(input);
+  } else if (step.type === 'email') {
+    input = document.createElement('input');
+    input.type = step.type;
+    input.id = step.name;
+    input.name = step.name;
+    input.autocomplete = 'off';
+    input.value = formData[step.name] || '';
+    input.placeholder = step.placeholder || '';
+    input.required = step.required === true;
+    input.autofocus = true;
+    setTimeout(() => input.focus(), 120);
+    formDiv.appendChild(input);
+    // --- Instagram handle field ---
+    const igInput = document.createElement('input');
+    igInput.type = 'text';
+    igInput.id = 'instagram';
+    igInput.name = 'instagram';
+    igInput.placeholder = 'Instagram handle (optional)';
+    igInput.value = formData.instagram || '';
+    igInput.style.marginBottom = '1.35rem';
+    formDiv.appendChild(igInput);
   } else if (step.type === 'textarea') {
     input = document.createElement('textarea');
     input.id = step.name;
@@ -288,7 +309,7 @@ function submitForm(data, cb) {
   fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...data, discount: data.discount || '' }),
+    body: JSON.stringify({ ...data, discount: data.discount || '', instagram: data.instagram || '' }),
   })
     .then(() => { btn.disabled = false; cb(); })
     .catch(() => { btn.disabled = false; cb(); });
